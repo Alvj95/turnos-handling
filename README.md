@@ -2,7 +2,7 @@
 
 App web/móvil (PWA) de calendario de turnos para el personal de handling del aeropuerto.
 
-**Abrir la app:** https://josealvarado0494-jpg.github.io/turnos-handling/
+**Abrir la app:** https://alvj95.github.io/turnos-handling/
 
 ## Qué hace
 
