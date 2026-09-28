@@ -1,4 +1,5 @@
 import type { IncomingSwap, Swap, SwapKind } from '../types'
+import { APP_SCHEME, appUrl } from './platform'
 
 /**
  * Swap requests travel as links inside the WhatsApp message, so two phones can agree on a
@@ -29,10 +30,6 @@ function encode(payload: LinkPayload): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
-function appUrl(): string {
-  return `${location.origin}${location.pathname}`
-}
-
 export function requestLink(swap: Swap, me: string): string {
   const payload: RequestPayload = {
     t: 'req', id: swap.id, kind: swap.kind, from: me, to: swap.coworker, date: swap.date, start: swap.start,
@@ -45,7 +42,21 @@ export function answerLink(incoming: IncomingSwap, ok: boolean, by: string, note
   return `${appUrl()}#${PARAM}=${encode({ t: 'ans', id: incoming.id, ok, by, note })}`
 }
 
-/** Reads a request/answer from a URL hash such as "#cambio=…"; null if there is none or it is broken. */
+/** The same link for the installed Android app (custom scheme, opens it directly). */
+export function nativeLink(text: string): string | null {
+  const m = text.match(new RegExp(`${PARAM}=([A-Za-z0-9_-]+)`))
+  return m ? `${APP_SCHEME}://abrir?${PARAM}=${m[1]}` : null
+}
+
+/** Android "intent:" URL: opens the app if installed, otherwise stays in the browser. */
+export function intentLink(text: string, packageName: string): string | null {
+  const m = text.match(new RegExp(`${PARAM}=([A-Za-z0-9_-]+)`))
+  return m ? `intent://abrir?${PARAM}=${m[1]}#Intent;scheme=${APP_SCHEME};package=${packageName};end` : null
+}
+
+export const hasLink = (text: string) => new RegExp(`${PARAM}=[A-Za-z0-9_-]+`).test(text)
+
+/** Reads a request/answer from a URL, hash or pasted message containing "cambio=…"; null if there is none or it is broken. */
 export function readLink(hash: string): LinkPayload | null {
   const m = hash.match(new RegExp(`${PARAM}=([A-Za-z0-9_-]+)`))
   if (!m) return null

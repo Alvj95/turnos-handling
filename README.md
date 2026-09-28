@@ -4,6 +4,13 @@ App web/móvil (PWA) de calendario de turnos para el personal de handling del ae
 
 **Abrir la app:** https://alvj95.github.io/turnos-handling/
 
+## Instalar
+
+- **Android**: descarga [TurnosHandling.apk](https://alvj95.github.io/turnos-handling/TurnosHandling.apk) desde el teléfono (también está en **Releases**), ábrelo y permite instalar apps de origen desconocido. Para actualizar, descarga e instala la nueva versión encima.
+- **iPhone**: abre la app en **Safari** → **Compartir** → **Añadir a pantalla de inicio**. Se abre a pantalla completa y funciona sin conexión.
+
+Los enlaces de cambio que llegan por WhatsApp abren la app de Android directamente (botón **Abrir en la app**). En iPhone, copia el enlace y pégalo en **Cambios → Pegar enlace de cambio recibido**.
+
 ## Qué hace
 
 - **Mis turnos**: calendario mensual con tus turnos (hora de entrada y salida, puesto) y los **vuelos que te toca atender** en check-in/embarque (nº de vuelo, destino, hora de salida STD, mostradores o puerta). Turnos nocturnos que terminan al día siguiente incluidos. Exporta el mes a Google Calendar / Outlook / calendario del móvil (`.ics`).
@@ -37,7 +44,9 @@ La app tiene un botón para descargar una plantilla.
 
 ## Publicación
 
-Cada push a `main` pasa los tests, compila y publica en GitHub Pages (`.github/workflows/deploy.yml`). Requiere **Settings → Pages → Source: GitHub Actions**.
+Cada push a `main` (`.github/workflows/deploy.yml`) pasa los tests, compila la web y el APK de Android (Capacitor), publica el APK como Release y despliega todo en GitHub Pages. Requiere **Settings → Pages → Source: GitHub Actions**.
+
+El APK se firma con una clave de prueba fija (`android/app/turnos-debug.keystore`) para que las actualizaciones se instalen encima. Para Google Play (cuenta de desarrollador, 25 USD pago único) hace falta una clave privada fuera del repositorio. Para la App Store hace falta una cuenta de Apple Developer (99 USD/año) y compilar en macOS.
 
 ## Desarrollo
 
@@ -46,6 +55,7 @@ npm install
 npm run dev     # http://localhost:5173
 npm test        # tests del importador, horas y cambios
 npm run build   # genera dist/
+npm run android # compila, sincroniza y abre el proyecto en Android Studio
 ```
 
 ## Siguientes pasos

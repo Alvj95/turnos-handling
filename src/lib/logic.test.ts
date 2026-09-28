@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { emptyData } from './store'
 import { isMe, mergeCompanyShifts, parseCell, parseDate, parseFlights, parseRoster } from './roster'
 import { answerMessage, applyAcceptedSwap, applyIncomingSwap, mailtoUrl, newSwap, receiveLink, schedulingEmail, swapCandidates, swapMessage } from './swaps'
-import { readLink } from './links'
+import { intentLink, nativeLink, readLink } from './links'
 import { monthGrid, nightMinutes, normalizeTime, shiftMinutes } from './time'
 import { shiftsToICS } from './ics'
 
@@ -123,8 +123,6 @@ describe('swaps', () => {
   })
 })
 
-vi.stubGlobal('location', { origin: 'https://example.github.io', pathname: '/picap/turnos/' })
-
 describe('request → coworker accepts → email to scheduling', () => {
   const ana = { name: 'Ana Pérez', employeeId: '1234', schedulingEmail: 'programacion@example.com' }
   const luis = { name: 'Luis Gómez', employeeId: '', schedulingEmail: '' }
@@ -166,6 +164,16 @@ describe('request → coworker accepts → email to scheduling', () => {
     expect(anaData.shifts[0]).toMatchObject({ start: '13:00', end: '21:00' })
     expect(luisData.shifts[0]).toMatchObject({ start: '05:00', end: '13:00' })
     expect(luisData.incoming[0].status).toBe('aplicado')
+  })
+
+  it('opens links from the web, the Android app scheme and pasted WhatsApp text', () => {
+    const swap = newSwap({ kind: 'cesion', date: '2026-10-05', start: '05:00', end: '13:00', role: '', coworker: 'Luis Gómez', coworkerStart: '', coworkerEnd: '', note: 'ñ 🙂' })
+    const message = swapMessage(swap, 'Ana Pérez')
+    expect(message).toContain('https://alvj95.github.io/turnos-handling/#cambio=')
+    const native = nativeLink(message)!
+    expect(native).toMatch(/^turnoshandling:\/\/abrir\?cambio=/)
+    expect(intentLink(message, 'com.turnoshandling.app')).toMatch(/^intent:\/\/abrir\?cambio=.+#Intent;scheme=turnoshandling;package=com\.turnoshandling\.app;end$/)
+    for (const text of [message, native]) expect(readLink(text)).toMatchObject({ t: 'req', id: swap.id, note: 'ñ 🙂' })
   })
 
   it('ignores answers for unknown requests and broken links', () => {

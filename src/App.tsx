@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { App as CapApp } from '@capacitor/app'
 import type { Shift } from './types'
 import { CalendarTab } from './components/CalendarTab'
 import { HoursTab } from './components/HoursTab'
+import { InstallCard, LinkHandoff } from './components/Install'
 import { ProfileSheet } from './components/ProfileSheet'
 import { RosterTab } from './components/RosterTab'
 import { SwapsTab } from './components/SwapsTab'
 import { isMe, mergeCompanyShifts } from './lib/roster'
 import { emptyData, useAppData } from './lib/store'
-import { readLink } from './lib/links'
+import { hasLink, readLink } from './lib/links'
+import { isNative } from './lib/platform'
 import { applyAcceptedSwap, applyIncomingSwap, receiveLink } from './lib/swaps'
 
 type Tab = 'calendar' | 'roster' | 'swaps' | 'hours'
@@ -28,25 +31,55 @@ export default function App() {
   const [swapShiftId, setSwapShiftId] = useState('')
   const [notice, setNotice] = useState('')
 
-  // Swap request/answer links arrive as "#cambio=…" (opened from WhatsApp).
+  const [openedLink, setOpenedLink] = useState('') // link opened in a browser tab, to hand off to the app
+
+  /** Records a swap request/answer link, wherever it came from (URL, native deep link, pasted text). */
+  const processLink = useCallback((text: string) => {
+    setTab('swaps')
+    const link = readLink(text)
+    if (!link) {
+      setNotice('El enlace del cambio está incompleto. Pide que te lo reenvíen.')
+      return false
+    }
+    update((d) => {
+      const result = receiveLink(d, link)
+      setNotice(result.notice)
+      return result.data
+    })
+    requestAnimationFrame(() => document.querySelector('.content')?.scrollTo(0, 0))
+    return true
+  }, [update])
+
+  // Web: links arrive as "#cambio=…" (opened from WhatsApp).
   useEffect(() => {
+    if (isNative()) return
     const handle = () => {
-      const link = readLink(location.hash)
-      if (!location.hash.includes('cambio=')) return
+      if (!hasLink(location.hash)) return
+      const text = location.href
       history.replaceState(null, '', location.pathname + location.search)
-      setTab('swaps')
-      if (!link) return setNotice('El enlace del cambio está incompleto. Pide que te lo reenvíen.')
-      update((d) => {
-        const result = receiveLink(d, link)
-        setNotice(result.notice)
-        return result.data
-      })
-      requestAnimationFrame(() => document.querySelector('.content')?.scrollTo(0, 0))
+      setOpenedLink(text)
+      processLink(text)
     }
     handle()
     window.addEventListener('hashchange', handle)
     return () => window.removeEventListener('hashchange', handle)
-  }, [update])
+  }, [processLink])
+
+  // Android app: links open the app directly (turnoshandling://… or the https link).
+  useEffect(() => {
+    if (!isNative()) return
+    CapApp.getLaunchUrl().then((launch) => launch?.url && hasLink(launch.url) && processLink(launch.url))
+    const opened = CapApp.addListener('appUrlOpen', ({ url }) => hasLink(url) && processLink(url))
+    // Back button closes the open sheet first; with nothing open it leaves the app.
+    const back = CapApp.addListener('backButton', () => {
+      if (document.querySelector('.sheet')) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      else CapApp.minimizeApp()
+    })
+    return () => {
+      opened.then((h) => h.remove())
+      back.then((h) => h.remove())
+    }
+  }, [processLink])
 
   const myRoster = useMemo(() => data.roster.filter((e) => isMe(e.employee, data.profile)), [data.roster, data.profile])
   // Things waiting on me: requests to answer and accepted changes to email.
@@ -88,6 +121,8 @@ export default function App() {
         {notice && (
           <button className="banner notice" onClick={() => setNotice('')}>{notice} <span className="muted">✕</span></button>
         )}
+        {openedLink && <LinkHandoff link={openedLink} onClose={() => setOpenedLink('')} />}
+        {tab === 'calendar' && <InstallCard />}
         {tab === 'calendar' && (
           <CalendarTab
             shifts={data.shifts}
@@ -129,6 +164,7 @@ export default function App() {
               incoming: d.incoming.map((i) => (i.id === id ? { ...i, status: ok ? 'aceptado' : 'rechazado' } : i)),
             }))}
             onApplyIncoming={(inc) => update((d) => applyIncomingSwap(d, inc))}
+            onPasteLink={processLink}
           />
         )}
         {tab === 'hours' && <HoursTab shifts={data.shifts} />}

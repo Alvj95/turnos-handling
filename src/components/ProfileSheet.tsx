@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { AppData, Profile } from '../types'
 import { downloadFile, reviveData } from '../lib/store'
 import { todayISO } from '../lib/time'
+import { InstallSection } from './Install'
 import { Sheet } from './Sheet'
 
 type Props = {
@@ -41,6 +42,8 @@ export function ProfileSheet({ data, onSave, onRestore, onReset, onClose }: Prop
       <div className="actions">
         <button className="btn primary" onClick={() => { onSave(profile); onClose() }}>Guardar</button>
       </div>
+
+      <InstallSection />
 
       <h3 className="list-title">Copia de seguridad</h3>
       <p className="hint">Tus datos se guardan solo en este teléfono. Descarga una copia para pasarlos a otro dispositivo.</p>

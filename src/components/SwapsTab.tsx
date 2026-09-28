@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { IncomingSwap, Profile, RosterEntry, Shift, Swap, SwapKind, SwapStatus } from '../types'
-import { shareText } from '../lib/store'
+import { openExternal, shareText } from '../lib/store'
 import { answerMessage, mailtoUrl, newSwap, schedulingEmail, swapCandidates, swapMessage, type Candidate } from '../lib/swaps'
 import { formatLongDate, todayISO } from '../lib/time'
 import { Sheet } from './Sheet'
@@ -19,6 +19,7 @@ type Props = {
   onSchedulingEmail: (email: string) => void
   onAnswer: (id: string, ok: boolean) => void
   onApplyIncoming: (incoming: IncomingSwap) => void
+  onPasteLink: (text: string) => boolean
 }
 
 const STATUS_LABEL: Record<SwapStatus, string> = {
@@ -85,6 +86,8 @@ export function SwapsTab(props: Props) {
           ))}
         </>
       )}
+
+      <PasteLink onPaste={props.onPasteLink} />
 
       {activeSent.length > 0 && (
         <>
@@ -205,7 +208,7 @@ function SentCard({ swap: s, profile, onUpdate, onApprove, onSchedulingEmail }: 
 
   const sendEmail = () => {
     if (email.trim() !== profile.schedulingEmail) onSchedulingEmail(email.trim())
-    window.location.href = mailtoUrl(mail)
+    openExternal(mailtoUrl(mail))
     onUpdate(s.id, { status: 'enviado_programacion', emailedAt: Date.now() })
   }
   const copyEmail = async () => {
@@ -327,6 +330,32 @@ function AnswerSheet({ item, ok, me, onClose, onSend }: {
         <button className={`btn ${ok ? 'primary' : 'danger'}`} onClick={() => onSend(note.trim())}>{ok ? 'Aceptar y responder' : 'Rechazar y responder'}</button>
       </div>
     </Sheet>
+  )
+}
+
+/** Paste a request/answer link received on WhatsApp (needed when the link opened elsewhere). */
+function PasteLink({ onPaste }: { onPaste: (text: string) => boolean }) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+
+  const fromClipboard = async () => {
+    const clip = await navigator.clipboard?.readText?.().catch(() => '')
+    if (clip && /cambio=/.test(clip)) onPaste(clip)
+    else setOpen(true)
+  }
+
+  if (!open) return <button className="btn ghost full" onClick={fromClipboard}>📋 Pegar enlace de cambio recibido</button>
+  return (
+    <div className="card">
+      <label className="field">
+        <span>Pega aquí el mensaje o enlace que te llegó por WhatsApp</span>
+        <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+      </label>
+      <div className="actions">
+        <button className="btn ghost" onClick={() => setOpen(false)}>Cancelar</button>
+        <button className="btn primary" disabled={!/cambio=/.test(text)} onClick={() => onPaste(text) && (setText(''), setOpen(false))}>Abrir</button>
+      </div>
+    </div>
   )
 }
 

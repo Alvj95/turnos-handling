@@ -36,6 +36,8 @@
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 body { margin: 0; background: var(--bg); }
+a.btn { text-decoration: none; color: inherit; }
+a.btn.primary { color: var(--primary-ink); }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; touch-action: manipulation; }
 button:disabled { cursor: not-allowed; opacity: 0.5; }
@@ -206,3 +208,9 @@ code { background: var(--panel-2); padding: 1px 4px; border-radius: 4px; font-si
 .status.enviado_programacion { background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary); }
 .status.denegado { color: var(--danger); }
 .btn.danger:not(.ghost) { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* Install */
+.install-card { border-color: color-mix(in srgb, var(--primary) 40%, var(--line)); }
+.install-steps { margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.7; }
+.ios-share { display: inline-block; padding: 0 5px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; }
+.handoff { border-color: var(--primary); }

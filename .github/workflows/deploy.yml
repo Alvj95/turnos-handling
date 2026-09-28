@@ -1,4 +1,4 @@
-name: Publicar en GitHub Pages
+name: Publicar app (web + Android)
 
 on:
   push:
@@ -6,12 +6,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # publish the APK as a GitHub Release
   pages: write
   id-token: write
 
 concurrency:
-  group: pages
+  group: publish
   cancel-in-progress: true
 
 jobs:
@@ -23,9 +23,47 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: npx cap sync android
+
+      # The ubuntu runner ships the Android SDK (ANDROID_HOME); Gradle fetches any missing platform.
+      - name: Compilar APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Preparar APK
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk TurnosHandling.apk
+          # Some browsers block raw .apk downloads; a zip copy gets through.
+          zip -j TurnosHandling-apk.zip TurnosHandling.apk
+          # Served next to the web app so it can be downloaded from the phone.
+          cp TurnosHandling.apk dist/
+
+      - name: Publicar release con el APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Turnos Handling v1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: |
+            TurnosHandling.apk
+            TurnosHandling-apk.zip
+          body: |
+            App de Android de Turnos Handling.
+
+            **Instalar:** descarga `TurnosHandling.apk` desde el teléfono, ábrelo y permite instalar apps de origen desconocido.
+            También se puede descargar desde la app web: https://alvj95.github.io/turnos-handling/TurnosHandling.apk
+
+            Si el navegador bloquea la descarga del .apk, baja `TurnosHandling-apk.zip`, descomprímelo y abre el .apk que trae dentro.
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

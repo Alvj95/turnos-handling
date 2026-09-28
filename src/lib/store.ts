@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AppData } from '../types'
+import { isNative } from './platform'
 
 const KEY = 'turnos-handling:v1'
 
@@ -60,7 +61,14 @@ export function useAppData() {
   return [data, update] as const
 }
 
-export function downloadFile(name: string, content: string, type: string) {
+/** Saves a generated file: native share sheet in the app (save, email, calendar…), download on the web. */
+export async function downloadFile(name: string, content: string, type: string) {
+  if (isNative()) {
+    const [{ Filesystem, Directory, Encoding }, { Share }] = await Promise.all([import('@capacitor/filesystem'), import('@capacitor/share')])
+    const { uri } = await Filesystem.writeFile({ path: name, data: content, directory: Directory.Cache, encoding: Encoding.UTF8 })
+    await Share.share({ title: name, files: [uri] }).catch(() => {})
+    return
+  }
   const url = URL.createObjectURL(new Blob([content], { type }))
   const a = document.createElement('a')
   a.href = url
@@ -71,6 +79,11 @@ export function downloadFile(name: string, content: string, type: string) {
 
 /** Opens the native share sheet when available, WhatsApp otherwise. */
 export async function shareText(text: string) {
+  if (isNative()) {
+    const { Share } = await import('@capacitor/share')
+    await Share.share({ text }).catch(() => {})
+    return
+  }
   if (navigator.share) {
     try {
       await navigator.share({ text })
@@ -80,4 +93,10 @@ export async function shareText(text: string) {
     }
   }
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
+}
+
+/** Opens a mailto:/tel:/https link outside the app (mail app, browser…). */
+export function openExternal(url: string) {
+  if (isNative() || url.startsWith('mailto:')) window.location.href = url
+  else window.open(url, '_blank', 'noopener')
 }

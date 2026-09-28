@@ -1,5 +1,5 @@
 // Network-first cache so the app opens without signal (e.g. on the apron) after the first visit.
-const CACHE = 'turnos-handling-v1'
+const CACHE = 'turnos-handling-v2'
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', (event) => {
@@ -11,7 +11,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return
+  const url = new URL(request.url)
+  // The Android APK is large and always downloaded fresh.
+  if (request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.endsWith('.apk')) return
   event.respondWith(
     fetch(request)
       .then((response) => {
