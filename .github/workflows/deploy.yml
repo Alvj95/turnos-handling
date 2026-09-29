@@ -36,11 +36,11 @@ jobs:
       # The ubuntu runner ships the Android SDK (ANDROID_HOME); Gradle fetches any missing platform.
       - name: Compilar APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Preparar APK
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk TurnosHandling.apk
+          cp android/app/build/outputs/apk/release/app-release.apk TurnosHandling.apk
           # Some browsers block raw .apk downloads; a zip copy gets through.
           zip -j TurnosHandling-apk.zip TurnosHandling.apk
           # Served next to the web app so it can be downloaded from the phone.

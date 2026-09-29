@@ -18,9 +18,9 @@ android {
         }
     }
     signingConfigs {
-        // Fixed test key (not secret): every build has the same signature, so updates install
+        // Fixed key (not secret): every build has the same signature, so updates install
         // cleanly. Google Play needs a private key kept out of the repo.
-        debug {
+        release {
             storeFile file('turnos-debug.keystore')
             storePassword 'turnosdebug'
             keyAlias 'turnos'
@@ -28,10 +28,9 @@ android {
         }
     }
     buildTypes {
-        debug {
-            signingConfig signingConfigs.debug
-        }
         release {
+            // A release (non-debuggable) APK is less likely to be blocked by Play Protect.
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
